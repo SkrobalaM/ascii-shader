@@ -1,11 +1,15 @@
-// image_processing.c : Resize input image calculate luminance create quant matrix and build the image using SDL
-//
-// Compilation :
-//   gcc -O2 image_processing.c -o image_processing -lm `sdl2-config --cflags --libs` -lSDL2_image
-//
-// Usage :
-//   ./image_processing.c input.png
+/*
+image_processing.c :
+	In a thread uses ffmpeg to exract frame froma video
+	When at least n number of frames have been extracted
+		frame by frame : resize input image calculate luminance create quant matrix and build the image using SDL
 
+Compilation :
+	gcc -O2 image_processing.c -o image_processing -lm `sdl2-config --cflags --libs` -lSDL2_image
+
+Usage :
+	./image_processing.c input.mp4
+*/
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_HDR
@@ -20,7 +24,22 @@
 #include <math.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <pthread.h>
+#include "extract.h"
 
+void * extractT(void *video_name) {
+    extract((char *)video_name);
+    pthread_exit(NULL);
+}
+
+int fileExists(const char *filename) {
+    FILE *f = fopen(filename, "r");
+    if (f) {
+        fclose(f);
+        return 1;
+    }
+    return 0;
+}
 
 void quantDownScale (int w, int h, unsigned char* pixels, float* quant_pixels_downScaled){
 	int w_d = (int)w/8;
@@ -39,13 +58,7 @@ void quantDownScale (int w, int h, unsigned char* pixels, float* quant_pixels_do
 }
 
 void clearImage(int w, int h, float* pixels){
-	for (int i = 0; i < w; ++i)
-	{
-		for (int j = 0; j < h; ++j)
-		{
-			pixels[i+j] = 0.0;
-		}
-	}
+	memset(pixels, 0, sizeof(float) * (size_t)w * (size_t)h);
 }
 
 static SDL_Texture* loadTexture(SDL_Renderer* r, const char* path) {
@@ -86,11 +99,32 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    const char* path = argv[1];
+    int status;
+    status = system("rm -f video_data/*");
+
+    void* vid = argv[1];
+    pthread_t extract_t;
+    pthread_create(&extract_t, NULL, extractT, vid);
+
+    
+
+    const char* frame = "img0001.jpg";
     const char* path_textures="char";
+    const char* dir = "video_data/";
     const int DISPLAY_SCALE = 2;
     const int size_tiles = 8;
     const int number_tiles = 10;
+
+    int check = 1;
+    char* buffer_frame = "img0200.jpg";
+    char path_buffer[256];
+
+    snprintf(path_buffer, sizeof(path_buffer), "%s%s", dir,buffer_frame);
+
+    char path[256];
+    snprintf(path, sizeof(path), "%s%s", dir,frame);
+
+    float gamma = 1.5f;
     SDL_Texture** digits = malloc(sizeof(SDL_Texture*)*number_tiles);
 
     
@@ -98,12 +132,19 @@ int main(int argc, char** argv) {
     int w = 0, h = 0, c = 0;
     int desired_channels = 1;
 
+    while(check){
+    	if (fileExists(path_buffer)){
+    		check = 0;
+    	}
+    } 
+
     unsigned char* pixels = stbi_load(path, &w, &h, &c, desired_channels);
 
 	int w_d = (int)w/size_tiles;
 	int h_d = (int)h/size_tiles;
 	int img_w = w_d * size_tiles;
     int img_h = h_d * size_tiles;
+
 
 	float* pixels_d = malloc(sizeof(float)*w_d*h_d);
 
@@ -127,32 +168,44 @@ int main(int argc, char** argv) {
 
 	loadTilesLopp(number_tiles,path_textures,ren,digits);
     
-    
-    
-	clearImage(w_d, h_d, pixels_d);
-	quantDownScale(w,h,pixels,pixels_d);
-	stbi_image_free(pixels);
-    
-										    
-
 	
-	float gamma = 1.5f;
-	renderingEngine(gamma, w_d, h_d, number_tiles,pixels_d, digits, ren, mosaic);
+	
+	
 
-	SDL_SetRenderTarget(ren, NULL); 
+	int max_frame = countFiles(dir);
+	int frame_nb=1;
 	int running = 1;
 	SDL_Event e;
-	while (running) {
-    while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE))
-            running = 0;
-    }
+	while (running || frame_nb<max_frame) {
+	    while (SDL_PollEvent(&e)) {
+	        if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE))
+	            running = 0;
+	    }
 
-    SDL_RenderClear(ren);
-    SDL_RenderCopy(ren, mosaic, NULL, NULL);
-    SDL_RenderPresent(ren);
-    SDL_Delay(16);
-}
+	    clearImage(w_d, h_d, pixels_d);
+		quantDownScale(w,h,pixels,pixels_d);
+		stbi_image_free(pixels);
+		
+		
 
+		renderingEngine(gamma, w_d, h_d, number_tiles,pixels_d, digits, ren, mosaic);
+
+		SDL_SetRenderTarget(ren, NULL);
+	    SDL_RenderClear(ren);
+	    SDL_RenderCopy(ren, mosaic, NULL, NULL);
+	    SDL_RenderPresent(ren);
+	    SDL_Delay(16);
+
+
+	    frame_nb ++;
+		snprintf(path, sizeof(path), "%simg%04d.jpg", dir, frame_nb);
+		
+		pixels = stbi_load(path, &w, &h, &c, desired_channels);
+
+	    
+	}
+	
+	pthread_join(extract_t, NULL);
+	status = system("rm -f video_data/*");
 }
 
