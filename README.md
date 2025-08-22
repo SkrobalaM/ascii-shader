@@ -15,6 +15,7 @@
 
 This program extracts frames from a video file and processes them to display a **quantized mosaic visualization** in real time using **SDL2**.
 
+![screenshot](example/img_example.png)
 
 https://github.com/user-attachments/assets/c4a85c45-899b-42e4-9996-00ba79a45079
 
