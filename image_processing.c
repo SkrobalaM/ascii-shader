@@ -75,17 +75,26 @@ void loadTilesLopp(int number_tiles,const char* path_textures,SDL_Renderer* ren,
     }
 }
 
-void renderingEngine(float gamma, int w, int h, int number_tiles,float* pixels, SDL_Texture** digits, SDL_Renderer* ren, SDL_Texture* mosaic){
+int sensitivity(int x, float gamma) {
+    float t = x / 10.0;
+
+    float num = pow(t, gamma);
+    float den = num + pow(1.0 - t, gamma);
+
+    if (den == 0.0) return (int)x;
+
+    return (int)10.0 * num / den;
+}
+
+void renderingEngine(int gamma, int w, int h, int number_tiles,float* pixels, SDL_Texture** digits, SDL_Renderer* ren, SDL_Texture* mosaic){
 	SDL_SetRenderTarget(ren, mosaic);
 	SDL_SetRenderDrawColor(ren, 16,16,16,255);
 	SDL_RenderClear(ren);
 	int max_val = number_tiles -1;
 	for (int y = 0; y < h; ++y) {
 	    for (int x = 0; x < w; ++x) {
-	        int v = pixels[y*w + x];
-	        float norm = (float)v / max_val;
-			norm = powf(norm, gamma);         
-			v = (int)(norm * max_val + 0.5f);
+	        int v = pixels[y*w + x];       
+			v = sensitivity(v,gamma);
 	        if (v < 0) v = 0; if (v > 9) v = 9;
 	        SDL_Rect dst = { x * 8, y * 8, 8, 8 };
 	        SDL_RenderCopy(ren, digits[v], NULL, &dst);
@@ -111,7 +120,7 @@ int main(int argc, char** argv) {
     const char* frame = "img0001.jpg";
     const char* path_textures="char";
     const char* dir = "video_data/";
-    const int DISPLAY_SCALE = 2;
+    const int DISPLAY_SCALE = 1;
     const int size_tiles = 8;
     const int number_tiles = 10;
 
