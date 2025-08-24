@@ -5,26 +5,46 @@ image_processing.c :
 		frame by frame : resize input image calculate luminance create quant matrix and build the image using SDL
 
 Compilation :
-	gcc -O2 image_processing.c -o image_processing -lm `sdl2-config --cflags --libs` -lSDL2_image
+	gcc -O2 image_processing.c -o image_processing -lm `sdl2-config --cflags --libs` -lSDL2_image -lSDL2_ttf
 
 Usage :
 	./image_processing.c input.mp4
+
+Performance :
+	no optimisation
+		FF7_vid.mp4 : 	Average FPS  = 39
+						Average rendering delay = 5.961 ms
+	-01
+		FF7_vid.mp4 : 	Average FPS  = 92
+						Average rendering delay = 1.804 ms
+	-02
+		FF7_vid.mp4 : 	Average FPS  = 95
+						Average rendering delay = 1.574 ms
+	-03
+		FF7_vid.mp4 : 	Average FPS  = 102
+						Average rendering delay = 1.302 ms
+	-0fast
+		FF7_vid.mp4 : 	Average FPS  = 102
+						Average rendering delay = 1.300 ms
 */
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_HDR
 #define STBI_NO_LINEAR
-#include "stb/stb_image.h"
+
 
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <pthread.h>
+#include <time.h>
 #include <math.h>
+#include "stb/stb_image.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include <pthread.h>
+#include <SDL2/SDL_ttf.h>
 #include "extract.h"
 
 void * extractT(void *video_name) {
@@ -128,6 +148,9 @@ int main(int argc, char** argv) {
     char* buffer_frame = "img0200.jpg";
     char path_buffer[256];
 
+    char buf_fps[512];
+    SDL_Color green = {51, 153, 51, 255};
+
     snprintf(path_buffer, sizeof(path_buffer), "%s%s", dir,buffer_frame);
 
     char path[256];
@@ -176,6 +199,11 @@ int main(int argc, char** argv) {
 										    img_w, img_h);
 
 	loadTilesLopp(number_tiles,path_textures,ren,digits);
+
+	TTF_Init();
+	TTF_Font* font = TTF_OpenFont("font/font.ttf", 32);
+	
+	
     
 	
 	
@@ -184,16 +212,40 @@ int main(int argc, char** argv) {
 	int max_frame = countFiles(dir);
 	int frame_nb=1;
 	int running = 1;
+
+
+	int avg_fps = 0;
+	int nb_fps = 0;
+	int fps_last_time = 0;
+	int fps_frames = 0;
+	int fps_current = 0;
+
+	int ticks = 0;
+	int ms = 0;
+	double u_sec = 0.0;
+	double total_rendering_delay = 0.0;
+	double avg_rendering_delay;
+
+
 	SDL_Event e;
-	while (running || frame_nb<max_frame) {
+	while (running && frame_nb<max_frame-1) {
 	    while (SDL_PollEvent(&e)) {
 	        if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE))
 	            running = 0;
 	    }
 
+	    
+
+
 	    clearImage(w_d, h_d, pixels_d);
+	    ticks = SDL_GetPerformanceCounter();
 		quantDownScale(w,h,pixels,pixels_d);
+		ms = (SDL_GetPerformanceCounter() - ticks);
+		u_sec = ms/1000000.0;
+		total_rendering_delay += u_sec;
+		
 		stbi_image_free(pixels);
+
 		
 		
 
@@ -202,8 +254,32 @@ int main(int argc, char** argv) {
 		SDL_SetRenderTarget(ren, NULL);
 	    SDL_RenderClear(ren);
 	    SDL_RenderCopy(ren, mosaic, NULL, NULL);
-	    SDL_RenderPresent(ren);
-	    SDL_Delay(16);
+	    
+
+	    fps_frames++;
+		Uint32 now = SDL_GetTicks();
+		if (now - fps_last_time >= 500) {
+		    fps_current = 2*fps_frames;
+		    fps_frames = 0;
+		    fps_last_time = now;
+		    avg_fps += fps_current;
+		    nb_fps += 1;
+		    max_frame = countFiles(dir);
+		}
+
+
+		snprintf(buf_fps, sizeof(buf_fps), "FPS: %d / Rendering delay : %.3f ms", fps_current,u_sec);
+
+		SDL_Surface* surf = TTF_RenderText_Solid(font, buf_fps, green);
+		SDL_Texture* tex = SDL_CreateTextureFromSurface(ren, surf);
+		SDL_Rect dst = { 10, 10, surf->w, surf->h };
+		SDL_RenderCopy(ren, tex, NULL, &dst);
+		SDL_FreeSurface(surf);
+		SDL_DestroyTexture(tex);
+
+
+		SDL_RenderPresent(ren);
+	    //SDL_Delay(16);
 
 
 	    frame_nb ++;
@@ -213,8 +289,43 @@ int main(int argc, char** argv) {
 
 	    
 	}
-	
+
 	pthread_join(extract_t, NULL);
 	status = system("rm -f video_data/*");
+
+	avg_fps = avg_fps/nb_fps;
+	avg_rendering_delay = total_rendering_delay/frame_nb;
+
+	snprintf(buf_fps, sizeof(buf_fps), "Average FPS : %d", avg_fps);
+	SDL_SetRenderTarget(ren, NULL);
+	SDL_RenderClear(ren);
+	SDL_Surface* surf = TTF_RenderText_Solid(font, buf_fps, green);
+	SDL_Texture* tex = SDL_CreateTextureFromSurface(ren, surf);
+	SDL_Rect dst = { 10, 10, surf->w, surf->h };
+	SDL_RenderCopy(ren, tex, NULL, &dst);
+	SDL_FreeSurface(surf);
+	SDL_DestroyTexture(tex);
+
+	snprintf(buf_fps, sizeof(buf_fps), "Average frame rendering delay : %.3f ms", avg_rendering_delay);
+	surf = TTF_RenderText_Solid(font, buf_fps, green);
+	tex = SDL_CreateTextureFromSurface(ren, surf);
+	SDL_Rect dst2 = { 10, 50, surf->w, surf->h };
+	SDL_RenderCopy(ren, tex, NULL, &dst2);
+	SDL_FreeSurface(surf);
+	SDL_DestroyTexture(tex);
+
+
+	running = 1;
+	while (running) {
+	    while (SDL_PollEvent(&e)) {
+	        if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE))
+	            running = 0;
+	    }
+	    SDL_RenderPresent(ren);
+		SDL_Delay(16);
+	}
+	
+
+	return 0;
 }
 
