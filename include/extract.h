@@ -3,6 +3,15 @@
 #include <dirent.h>
 #include <errno.h>
 
+int fileExists(const char *filename) {
+    FILE *f = fopen(filename, "r");
+    if (f) {
+        fclose(f);
+        return 1;
+    }
+    return 0;
+}
+
 int extract(const char *path) {
     char cmd[512];
     int status;
