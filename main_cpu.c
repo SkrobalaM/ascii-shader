@@ -5,18 +5,32 @@ image_processing.c :
 		frame by frame : resize input image calculate luminance create quant matrix and build the image using SDL
 
 Compilation :
-	make
-	make clean
+	make cpu
 
 Usage :
-	./image_processing_gpu.c input.mp4
+	./main_cpu.c input.mp4
 
+Performance :
+	no optimisation
+		FF7_vid.mp4 : 	Average FPS  = 39
+						Average rendering delay = 5.961 ms
+	-01
+		FF7_vid.mp4 : 	Average FPS  = 92
+						Average rendering delay = 1.804 ms
+	-02
+		FF7_vid.mp4 : 	Average FPS  = 95
+						Average rendering delay = 1.574 ms
+	-03
+		FF7_vid.mp4 : 	Average FPS  = 102
+						Average rendering delay = 1.302 ms
+	-0fast
+		FF7_vid.mp4 : 	Average FPS  = 102
+						Average rendering delay = 1.300 ms
 */
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_HDR
 #define STBI_NO_LINEAR
-
 
 
 #include <stdio.h>
@@ -30,7 +44,6 @@ Usage :
 #include "include/extract.h"
 #include "include/engine_cpu.h"
 
-void quantDownScale_gpu(int w, int h, unsigned char* pixels, float* out);
 
 void * extractT(void *video_name) {
     extract((char *)video_name);
@@ -41,7 +54,7 @@ void * extractT(void *video_name) {
 
 int main(int argc, char** argv) {
 	if (argc < 2) {
-        fprintf(stderr, "Usage: %s image.png\n", argv[0]);
+        fprintf(stderr, "Usage: %s image.mp4\n", argv[0]);
         return 1;
     }
 
@@ -120,21 +133,18 @@ int main(int argc, char** argv) {
 	TTF_Init();
 	TTF_Font* font = TTF_OpenFont("font/font.ttf", 32);
 	
-	
-    
-	
-	
-	
 
 	int max_frame = countFiles(dir);
 	int frame_nb=1;
 	int running = 1;
+	
+
 
 	int avg_fps = 0;
 	int nb_fps = 0;
 	int fps_update = 10;
 	Uint64 start;
-	Uint64 end;
+	Uint64 end ;
 	double elapsedMS;
 	int fps = 0;
 
@@ -143,6 +153,10 @@ int main(int argc, char** argv) {
 	double u_sec = 0.0;
 	double total_rendering_delay = 0.0;
 	double avg_rendering_delay;
+
+	
+
+
 
 	SDL_Event e;
 	while (running && frame_nb<max_frame-1) {
@@ -153,20 +167,25 @@ int main(int argc, char** argv) {
 
 	    
 	    start = SDL_GetPerformanceCounter();
+
 	    clearImage(w_d, h_d, pixels_d);
 	    ticks = SDL_GetPerformanceCounter();
-		quantDownScale_gpu(w,h,pixels,pixels_d);
+		quantDownScale(w,h,pixels,pixels_d);
 		ms = (SDL_GetPerformanceCounter() - ticks);
 		u_sec = ms/1000000.0;
 		total_rendering_delay += u_sec;
 		
 		stbi_image_free(pixels);
+
 		renderingEngine(gamma, w_d, h_d, number_tiles,pixels_d, digits, ren, mosaic);
 
 		SDL_SetRenderTarget(ren, NULL);
 	    SDL_RenderClear(ren);
 	    SDL_RenderCopy(ren, mosaic, NULL, NULL);
+	    
 
+	    
+		
 		if (frame_nb%fps_update == 0) {
 			Uint32 now = SDL_GetTicks();
 		    end = SDL_GetPerformanceCounter();
@@ -177,7 +196,10 @@ int main(int argc, char** argv) {
 		    max_frame = countFiles(dir);
 		}
 
+		
+
 		snprintf(buf_fps, sizeof(buf_fps), "FPS: %d / Rendering delay : %.3f ms", fps,u_sec);
+
 		SDL_Surface* surf = TTF_RenderText_Solid(font, buf_fps, green);
 		SDL_Texture* tex = SDL_CreateTextureFromSurface(ren, surf);
 		SDL_Rect dst = { 10, 10, surf->w, surf->h };
@@ -185,11 +207,16 @@ int main(int argc, char** argv) {
 		SDL_FreeSurface(surf);
 		SDL_DestroyTexture(tex);
 
+
 		SDL_RenderPresent(ren);
+
 
 	    frame_nb ++;
 		snprintf(path, sizeof(path), "%simg%04d.jpg", dir, frame_nb);
-		pixels = stbi_load(path, &w, &h, &c, desired_channels); 
+		
+		pixels = stbi_load(path, &w, &h, &c, desired_channels);
+
+	    
 	}
 
 	pthread_join(extract_t, NULL);
@@ -198,10 +225,9 @@ int main(int argc, char** argv) {
 	avg_fps = avg_fps/nb_fps;
 	avg_rendering_delay = total_rendering_delay/frame_nb;
 
+	snprintf(buf_fps, sizeof(buf_fps), "Average FPS : %d", avg_fps);
 	SDL_SetRenderTarget(ren, NULL);
 	SDL_RenderClear(ren);
-	
-	snprintf(buf_fps, sizeof(buf_fps), "Average FPS : %d", avg_fps);
 	SDL_Surface* surf = TTF_RenderText_Solid(font, buf_fps, green);
 	SDL_Texture* tex = SDL_CreateTextureFromSurface(ren, surf);
 	SDL_Rect dst = { 10, 10, surf->w, surf->h };

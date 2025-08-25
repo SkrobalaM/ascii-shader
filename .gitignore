@@ -1,5 +1,12 @@
 stb
-image_processing
-image_processing_gpu
-image_processing_gpu.o
 video/4K_vid.mp4
+gpu+include/ffmpeg_cuda.o
+include/engine_gpu.o
+gpu+include/enginge_gpu+.o
+video_data/*
+main_cpu.o
+main_gpu.o
+main_gpu+.o
+main_cpu
+main_gpu
+main_gpu+

@@ -1,6 +1,4 @@
-extern "C" {
-    void quantDownScale(int w, int h, unsigned char* pixels, float* out);
-}
+
 
 __global__ void quantDownScaleKernel(int w, int h, const unsigned char* pixels, float* out, int outW) {
     int tileX = blockIdx.x, tileY = blockIdx.y;
