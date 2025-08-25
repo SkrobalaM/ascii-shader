@@ -1,0 +1,13 @@
+Compiled using -O3/-Ofast
+
+GPU+:
+	4K => 258 FPS
+	1080p => 730 FPS
+
+GPU:
+	4K => 42 FPS
+	1080p => 203 FPS
+
+CPU:
+	4K => 34 FPS
+	1080p => 193 FPS

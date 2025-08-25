@@ -1,4 +1,5 @@
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_EASY_FONT_IMPLEMENTATION
 #define STBI_NO_HDR
 #define STBI_NO_LINEAR
 #define _POSIX_C_SOURCE 200112L
@@ -17,6 +18,7 @@
 #include <cuda.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include "stb/stb_easy_font.h"
 
 int  gpu_gl_init(SDL_Window* win, int img_w, int img_h);
 int  gpu_upload_digit_atlas(const unsigned char* rgba, int width, int height, int pitch_bytes);
@@ -31,6 +33,8 @@ int  fc_open_cuda(const char *filename, int *out_w, int *out_h);
 int  fc_read_cuda_luma(CUdeviceptr *d_luma, int *pitch, int *w, int *h);
 int  fc_get_sw_format(void);
 void fc_close(void);
+
+
 
 int main(int argc, char** argv){
     if (argc < 2){
@@ -120,7 +124,11 @@ int main(int argc, char** argv){
     int running = 1;
     Uint64 t0 = 0, t1 = 0;
     const double freq = (double)SDL_GetPerformanceFrequency();
-    double total_ms = 0.0; int frames = 0;
+    double total_ms = 0.0; int frames = 0; double ms = 0.0;
+
+    int fps;
+    static char fps_txt[64];
+    double avg = 0.0;
 
     SDL_Event e;
     while (running){
@@ -158,15 +166,23 @@ int main(int argc, char** argv){
 
         gpu_gl_render_digits(img_w, img_h, tile_sz, d_quant, gamma_val);
 
+        
+
         cudaDeviceSynchronize();
 
         t1 = SDL_GetPerformanceCounter();
-        total_ms += (t1 - t0) * 1000.0 / freq;
+        ms = t1 - t0;
+        avg = total_ms / frames;
+        total_ms += ms * 1000.0 / freq;
         frames++;
     }
 
+
+    
+    
+
     if (frames > 0){
-        double avg = total_ms / frames;
+        avg = total_ms / frames;
         printf("%.1f FPS\n", 1000.0 / avg);
     }
 
