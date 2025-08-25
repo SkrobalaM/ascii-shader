@@ -75,7 +75,7 @@ make gpu+
 - `example/` – Ascii rendering example.
 
 # Performances
-![screenshot](example/performance.png)
+![screenshot](example/performances.png)
 
 # Dependencies
 
