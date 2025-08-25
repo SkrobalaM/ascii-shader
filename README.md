@@ -12,13 +12,15 @@
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)
 ![C](https://img.shields.io/badge/c-%2300599C.svg?style=for-the-badge&logo=c&logoColor=white)
 ![FFmpeg](https://shields.io/badge/FFmpeg-%23171717.svg?logo=ffmpeg&style=for-the-badge&labelColor=171717&logoColor=5cb85c)
+[![CUDA](https://img.shields.io/badge/CUDA-76B900?logo=nvidia&logoColor=fff)](#)
 
-This program extracts frames from a video file and processes them to display a **quantized mosaic visualization** in real time using **SDL2**.
+This program extracts frames from a video file and processes them to display a **quantized mosaic visualization** in real time.
 
 ![screenshot](example/img_example.png)
 
 https://github.com/user-attachments/assets/c4a85c45-899b-42e4-9996-00ba79a45079
 
+# CPU
 
 ## How It Works
 
@@ -42,7 +44,7 @@ https://github.com/user-attachments/assets/c4a85c45-899b-42e4-9996-00ba79a45079
 To compile the program, make sure you have `SDL2` `SDL2_image` `stb` and `ffmpeg` installed:
 
 ```bash
-gcc -O2 image_processing.c -o image_processing -lm `sdl2-config --cflags --libs` -lSDL2_image
+make cpu
 ```
 
 ## Usage
@@ -51,12 +53,31 @@ gcc -O2 image_processing.c -o image_processing -lm `sdl2-config --cflags --libs`
 ./image_processing input.mp4
 ```
 
-## Folder Structure
+# GPU
+To improve performance the gpu is used. The gpu.c only quantize and samples frames on the gpu and copy back data to the cpu to display the frame.
+This solution improves slightly the rendering speed (2-5%).
+The gpu+.c is loading quantizing sampling and rendering frames on the gpu. It improves a lot rendering (350-450%).
+
+## Compilation
+```bash
+make gpu
+make gpu+
+```
+
+# Folder Structure
 
 - `video_data/` – Temporary storage for extracted frames.
 - `char/` – Folder containing 10 grayscale tile images (`0.png` to `9.png`).
+- `video/` – RGB videos to use as input.
+- `include/` – Include for CPU and GPU version.
+- `gpu+include/` – Include for GPU+ version.
+- `font/` – Font for CPU and GPU FPS display.
+- `example/` – Ascii rendering example.
 
-## Dependencies
+# Performances
+![screenshot](example/performance.png)
+
+# Dependencies
 
 - [SDL2](https://www.libsdl.org/)
 - [stb_image.h](https://github.com/nothings/stb) 
