@@ -11,12 +11,14 @@
 
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)
 ![C](https://img.shields.io/badge/c-%2300599C.svg?style=for-the-badge&logo=c&logoColor=white)
-![FFmpeg](https://shields.io/badge/FFmpeg-%23171717.svg?logo=ffmpeg&style=for-the-badge&labelColor=171717&logoColor=5cb85c)
 [![CUDA](https://img.shields.io/badge/CUDA-76B900?logo=nvidia&logoColor=fff)](#)
+![FFmpeg](https://shields.io/badge/FFmpeg-%23171717.svg?logo=ffmpeg&style=for-the-badge&labelColor=171717&logoColor=5cb85c)
+![OpenGL](https://img.shields.io/badge/OpenGL-%23FFFFFF.svg?style=for-the-badge&logo=opengl)
 
 This program extracts frames from a video file and processes them to display a **quantized mosaic visualization** in real time.
 
-![screenshot](example/img_example.png)
+<img src="example/img_example.png" alt="example" width="600">
+
 
 https://github.com/user-attachments/assets/c4a85c45-899b-42e4-9996-00ba79a45079
 
@@ -75,7 +77,8 @@ make gpu+
 - `example/` – Ascii rendering example.
 
 # Performances
-![screenshot](example/performances.png)
+<img src="example/performances.png" alt="performances" width="300">
+
 
 # Dependencies
 
